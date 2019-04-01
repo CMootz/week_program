@@ -107,3 +107,4 @@ venv.bak/
 data/
 frontend/
 .idea/
+.DS_Store
