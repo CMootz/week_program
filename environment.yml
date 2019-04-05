@@ -17,3 +17,4 @@ dependencies:
   - seaborn
   - sklearn
   - torch
+  - dateutil

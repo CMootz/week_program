@@ -14,9 +14,9 @@ class Preprocessing:
         self.name = name.lower()
         self.data = {}
         self.splits = {}
-        self.weather_opts = ['temperature', 'symbol', 'precipitation', 'windSpeed', 'pressure', 'windDirection',
-                             'humidity', 'fog', 'cloudiness', 'lowClouds', 'mediumClouds', 'highClouds',
-                             'dewpointTemperature']
+        self.weather_opts = ['weather_temperature', 'symbol', 'precipitation', 'wind_speed', 'pressure',
+                             'wind_direction','humidity', 'fog', 'cloudiness', 'low_clouds', 'medium_clouds',
+                             'high_clouds', 'dewpoint_temperature']
         self.weather_data = {}
 
         root_dir = os.path.dirname(os.path.abspath(__file__))
@@ -51,18 +51,8 @@ class Preprocessing:
                 df['set_temp'] = set_temp
                 self.set(dataname, df, domain + room)
 
+            df.loc[:, 'last_updated'] = df.loc[:, 'last_updated'].map(lambda x: dateutil.parser.parse(x))
             self.save_df(dataname, domain + room)
-
-    def load_weather_data(self, *, table='states', domain='sensor', dataname='weather', **kwargs):
-        for opt in self.weather_opts:
-            sqlquery = 'select state,last_updated from ' \
-                       '' + table + ' where entity_id like "%' + opt + '%"'
-            df[opt] = pd.read_sql_query(sqlquery, self.conn)
-
-
-
-            self.save_df(dataname, domain + room)
-
 
     def get(self, name, appendices=''):
         if appendices != '':
@@ -102,8 +92,25 @@ class Preprocessing:
             if time_row < ti:
                 return set_temps[index-1]
 
-    def add_weather_features(self, dataname):
-        feature = []
-        for row in state_climate_living_room_as_x.index:
-            feature.append(add_wp(time_steps, set_temp_wp, state_climate_living_room_as_x.loc[row, 'time']))
+#    def add_weather_features(self, dataname):
+#        feature = []
+#        for row in state_climate_living_room_as_x.index:
+#            feature.append(add_wp(time_steps, set_temp_wp, state_climate_living_room_as_x.loc[row, 'time']))
 
+    def extract_weather_data(self, table='states'):
+        for opt in self.weather_opts:
+            sqlquery = 'select entity_id,state,last_updated from ' \
+                       '' + table + ' where entity_id like "%' + opt + '%"'
+            df = pd.read_sql_query(sqlquery, self.conn)
+            df = df[df['entity_id'].str.contains(opt)][['state', 'last_updated']]
+            df = df[df.state != 'unknown']
+            df = df[df.state != 'none']
+            df['state'] = df['state'].astype('float')
+            df = df.reset_index(drop=True)
+            self.weather_data[opt] = df
+
+    @classmethod
+    def _add_feature_diff_t(clf, time_steps, set_temps, time_row):
+        for index, ti in enumerate(time_steps):
+            if time_row < ti:
+                return set_temps[index]
