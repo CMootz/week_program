@@ -92,11 +92,6 @@ class Preprocessing:
             if time_row < ti:
                 return set_temps[index-1]
 
-#    def add_weather_features(self, dataname):
-#        feature = []
-#        for row in state_climate_living_room_as_x.index:
-#            feature.append(add_wp(time_steps, set_temp_wp, state_climate_living_room_as_x.loc[row, 'time']))
-
     def extract_weather_data(self, table='states'):
         for opt in self.weather_opts:
             sqlquery = 'select entity_id,state,last_updated from ' \
@@ -106,11 +101,41 @@ class Preprocessing:
             df = df[df.state != 'unknown']
             df = df[df.state != 'none']
             df['state'] = df['state'].astype('float')
+            df.loc[:, 'last_updated'] = df.loc[:, 'last_updated'].map(lambda x: dateutil.parser.parse(x))
             df = df.reset_index(drop=True)
             self.weather_data[opt] = df
 
     @classmethod
-    def _add_feature_diff_t(clf, time_steps, set_temps, time_row):
+    def _add_feature_diff_t(clf, time_steps, feature, time_row):
         for index, ti in enumerate(time_steps):
             if time_row < ti:
-                return set_temps[index]
+                return feature[index]
+
+    @classmethod
+    def normalize_datet(clf, dataframe):
+        dataframe['day'] = dataframe['last_updated'].dt.day
+        dataframe['month'] = dataframe['last_updated'].dt.month
+        dataframe['year'] = dataframe['last_updated'].dt.year
+        dataframe['time'] = dataframe['last_updated'].dt.time
+        dataframe['weekday'] = dataframe['last_updated'].dt.weekday
+        dataframe['time'] = dataframe['time'].map(lambda x: x.hour + x.minute / 60.0)
+
+    def build_x_frame(self, rooms, domain='climate', dataname='train_raw', new_name='train'):
+        feature = []
+        for room in rooms:
+            main_frame = self.get(dataname + '_' + domain + room)
+            for opt in self.weather_opts:
+                for row in main_frame.index:
+                    feature.append(self._add_feature_diff_t(self.weather_data[opt]['last_updated'],
+                                                            self.weather_data[opt]['state'],
+                                                            main_frame.loc[row, 'last_updated']))
+                main_frame[opt] = feature
+                feature = []
+
+            self.normalize_datet(main_frame)
+            main_frame = main_frame.drop(columns=['entity_id', 'state', 'attributes'])
+
+            new_name = dataname.replace('_raw', '')
+
+            self.set(new_name, main_frame, domain + room)
+            self.save_df(new_name, domain + room)
