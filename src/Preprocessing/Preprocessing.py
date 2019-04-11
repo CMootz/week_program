@@ -49,9 +49,11 @@ class Preprocessing:
 
                 df['current_temp'] = current_temp
                 df['set_temp'] = set_temp
-                self.set(dataname, df, domain + room)
 
             df.loc[:, 'last_updated'] = df.loc[:, 'last_updated'].map(lambda x: dateutil.parser.parse(x))
+            df = df.set_index('last_updated').resample('T').pad()
+            df = df.reset_index()
+            self.set(dataname, df, domain + room)
             self.save_df(dataname, domain + room)
 
     def get(self, name, appendices=''):
@@ -134,6 +136,9 @@ class Preprocessing:
 
             self.normalize_datet(main_frame)
             main_frame = main_frame.drop(columns=['entity_id', 'state', 'attributes'])
+            main_frame = main_frame.dropna(subset=['current_temp', 'set_temp'], how='all')
+            main_frame = main_frame.dropna(thresh=main_frame.shape[1] - 2)
+            main_frame = main_frame.dropna(axis=1)
 
             new_name = dataname.replace('_raw', '')
 
