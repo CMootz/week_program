@@ -2,6 +2,7 @@ import sklearn
 import numpy as np
 import pandas as pd
 
+
 def count_days(data_set):
     date_list = []
     for item in data_set.index:
@@ -56,8 +57,8 @@ def train_val_test_split(data_set, val_size=0.25, test_size=0.25, number_samples
     test_set = test_set.drop(columns=drop_col)
 
     print(len(train_set), len(val_set), len(test_set))
-    train_set = np.stack(np.split(train_set, len(train_set)/number_samples))
-    val_set = np.stack(np.split(val_set, len(val_set) / number_samples))
-    test_set = np.stack(np.split(test_set, len(test_set) / number_samples))
+    #train_set = np.stack(np.split(train_set, len(train_set)/number_samples))
+    #val_set = np.stack(np.split(val_set, len(val_set) / number_samples))
+    #test_set = np.stack(np.split(test_set, len(test_set) / number_samples))
 
     return train_set, val_set, test_set
