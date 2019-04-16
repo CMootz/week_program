@@ -14,17 +14,23 @@ def count_days(data_set):
     return date_list
 
 
-def split_days(date_list, val_size=0.25, test_size=0.25, random_state=None):
-    dates_train, dates_test = sklearn.model_selection.train_test_split(date_list,
-                                                                       test_size=test_size,
-                                                                       random_state=random_state)
-    dates_train, dates_val = sklearn.model_selection.train_test_split(dates_train,
-                                                                      test_size=val_size,
-                                                                      random_state=random_state)
+def split_days(date_list, val_size=0.25, test_size=0.25):
+    if int(len(date_list)*val_size) <= 0:
+        length_val = 1
+    else:
+        length_val = int(len(date_list)*val_size)
+    if int((len(date_list) - length_val) * test_size) <= 0:
+        length_test = 1
+    else:
+        length_test = int((len(date_list) - length_val) * test_size)
+    dates_test = date_list[-length_test-1:-1]
+    dates_val = date_list[-length_test-length_val-1:-length_test-1]
+    dates_train = date_list[:-length_test-length_val-1]
+
     return dates_train, dates_test, dates_val
 
 
-def extract_data_by_date(data_set, date_list):
+def extract_data_by_date(data_set, date_list, number_samples=1439):
     df = data_set
     new_df = pd.DataFrame()
     for item in date_list:
@@ -38,10 +44,20 @@ def extract_data_by_date(data_set, date_list):
     return new_df
 
 
-def train_val_test_split(data_set, val_size=0.25, test_size=0.25, random_state=None):
+def train_val_test_split(data_set, val_size=0.25, test_size=0.25, number_samples=1439, drop_col=['last_updated']):
     days = count_days(data_set)
-    train_days, val_days, test_days = split_days(days, val_size, test_size, random_state)
+    train_days, val_days, test_days = split_days(days, val_size, test_size)
     train_set = extract_data_by_date(data_set, train_days)
     val_set = extract_data_by_date(data_set, val_days)
     test_set = extract_data_by_date(data_set, test_days)
+
+    train_set = train_set.drop(columns=drop_col)
+    val_set = val_set.drop(columns=drop_col)
+    test_set = test_set.drop(columns=drop_col)
+
+    print(len(train_set), len(val_set), len(test_set))
+    train_set = np.stack(np.split(train_set, len(train_set)/number_samples))
+    val_set = np.stack(np.split(val_set, len(val_set) / number_samples))
+    test_set = np.stack(np.split(test_set, len(test_set) / number_samples))
+
     return train_set, val_set, test_set
