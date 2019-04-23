@@ -51,7 +51,7 @@ class Preprocessing:
                 df['set_temp'] = set_temp
 
             df.loc[:, 'last_updated'] = df.loc[:, 'last_updated'].map(lambda x: dateutil.parser.parse(x))
-            df = df.set_index('last_updated').resample('T').pad()
+            df = df.set_index('last_updated').resample('10T').pad()
             df = df.reset_index()
             self.set(dataname, df, domain + room)
             self.save_df(dataname, domain + room)
@@ -118,9 +118,9 @@ class Preprocessing:
         dataframe['day'] = dataframe['last_updated'].dt.day
         dataframe['month'] = dataframe['last_updated'].dt.month
         dataframe['year'] = dataframe['last_updated'].dt.year
-        dataframe['time'] = dataframe['last_updated'].dt.time
-        dataframe['weekday'] = dataframe['last_updated'].dt.weekday
-        dataframe['time'] = dataframe['time'].map(lambda x: x.hour + x.minute / 60.0)
+        #dataframe['time'] = dataframe['last_updated'].dt.time
+        #dataframe['weekday'] = dataframe['last_updated'].dt.weekday
+        #dataframe['time'] = dataframe['time'].map(lambda x: x.hour + x.minute / 60.0)
 
     def build_x_frame(self, rooms, domain='climate', dataname='train_raw', new_name='train'):
         feature = []
@@ -144,3 +144,7 @@ class Preprocessing:
 
             self.set(new_name, main_frame, domain + room)
             self.save_df(new_name, domain + room)
+
+    def shuffle_df(self, name):
+        self.data[name] = self.data[name].sample(frac=1).reset_index(drop=True)
+        return self.data[name]
