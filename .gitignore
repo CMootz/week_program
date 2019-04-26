@@ -71,6 +71,7 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+.ipynb
 
 # pyenv
 .python-version
@@ -106,5 +107,6 @@ venv.bak/
 # my excludes
 data/
 frontend/
+Notebooks/
 .idea/
 .DS_Store
