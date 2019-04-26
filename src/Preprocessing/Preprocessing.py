@@ -30,11 +30,11 @@ class Preprocessing:
         shutil.copyfile(databasefolder + databasename, self.directory + databasename)
         self.conn = sql.connect(self.directory + databasename)
 
-    def load_data(self, *, table='states', domain='climate', rooms, dataname='train_raw', **kwargs):
+    def load_data(self, *, table='states', item='wand', domain='climate', rooms, dataname='train_raw', **kwargs):
         for room in rooms:
             sqlquery = 'select entity_id,state,attributes,last_updated from ' \
                        '' + table + ' where entity_id like "%' + domain + '%' \
-                       '' + room + '%wand%"'
+                       '' + room + '%' + item + '%"'
             df = pd.read_sql_query(sqlquery, self.conn)
             self.set(dataname, df, domain + room)
 
@@ -49,6 +49,29 @@ class Preprocessing:
 
                 df['current_temp'] = current_temp
                 df['set_temp'] = set_temp
+
+            if domain == 'sensor':
+                feature = []
+                current_temp = df[df['entity_id'].str.contains('current_temperature')]
+                current_temp = current_temp[current_temp.state != 'unknown']
+                current_temp = current_temp[current_temp.state != 'none']
+                current_temp = current_temp[current_temp.state != 'None']
+                current_temp = current_temp.reset_index(drop=True)
+                set_temp = df[df['entity_id'].str.contains('set_temperature')]
+                set_temp = set_temp[set_temp.state != 'unknown']
+                set_temp = set_temp[set_temp.state != 'none']
+                set_temp = set_temp[set_temp.state != 'None']
+                set_temp = set_temp.reset_index(drop=True)
+                for row in current_temp.index:
+                    feature.append(self._add_feature_diff_t(set_temp['last_updated'],
+                                                            set_temp['state'],
+                                                            current_temp.loc[row, 'last_updated']))
+                current_temp.columns = ['entity_id', 'current_temp', 'attributes', 'last_updated']
+                current_temp['set_temp'] = feature
+                current_temp['set_temp'] = current_temp['set_temp'].astype(float)
+                current_temp['current_temp'] = current_temp['current_temp'].astype(float)
+                current_temp = current_temp.drop(columns='attributes')
+                df = current_temp
 
             df.loc[:, 'last_updated'] = df.loc[:, 'last_updated'].map(lambda x: dateutil.parser.parse(x))
             df = df.set_index('last_updated').resample('10T').pad()
@@ -135,8 +158,11 @@ class Preprocessing:
                 feature = []
 
             self.normalize_datet(main_frame)
-            main_frame = main_frame.drop(columns=['entity_id', 'state', 'attributes'])
-            main_frame = main_frame.dropna(subset=['current_temp', 'set_temp'], how='all')
+            for col in ['entity_id', 'state', 'attributes']:
+                if col in main_frame.columns:
+                    main_frame = main_frame.drop(columns=col)
+            if 'set_temp' in main_frame.columns and 'current_temp' in main_frame.columns:
+                main_frame = main_frame.dropna(subset=['current_temp', 'set_temp'], how='all')
             main_frame = main_frame.dropna(thresh=main_frame.shape[1] - 2)
             main_frame = main_frame.dropna(axis=1)
 

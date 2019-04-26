@@ -30,12 +30,19 @@ def load_lstm_data(folder, filename, batch_size, n_output, split_set=True):
     df = Preprocessing.load_df(folder, filename)
     df['last_updated'] = df['last_updated'].astype(np.datetime64)
     if split_set:
-        train_set, val_set, test_set = train.train_val_test_split(df, batch_size, 0.1, 0.1)
+        train_set, val_set, test_set , train_set_last, val_set_last, test_set_last = \
+            train.train_val_test_split(df, batch_size, 0.1, 0.1)
         x_train, y_train = to_supervised(train_set, batch_size, n_output)
+        #x_train_last, y_train_last = to_supervised(train_set_last, len(train_set_last), n_output)
         x_val, y_val = to_supervised(train_set, batch_size, n_output)
+        #x_val_last, y_val_last = to_supervised(val_set_last, len(val_set_last), n_output)
         x_test, y_test = to_supervised(train_set, batch_size, n_output)
+        #x_test_last, y_test_last = to_supervised(test_set_last, len(test_set_last), n_output)
         return x_train, x_val, x_test, y_train, y_val, y_test
+
     else:
-        data_set = train.prepare_single_set(df, batch_size)
+        data_set, data_set_last = train.prepare_single_set(df, batch_size)
         x, y = to_supervised(data_set, batch_size, n_output)
+        #x_last, y_last = to_supervised(data_set_last, len(data_set_last), n_output)
+
         return x, y
